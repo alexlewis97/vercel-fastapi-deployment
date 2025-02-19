@@ -38,7 +38,6 @@ async def hello():
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from config import Settings
 from langchain_ai21 import ChatAI21
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_anthropic import ChatAnthropic
@@ -49,16 +48,12 @@ import re
 
 settings = Settings()
 
-os.environ["GOOGLE_API_KEY"] = settings.gemini_key
 llm_gemini = ChatGoogleGenerativeAI(model='gemini-2.0-flash-thinking-exp-01-21')
 
-os.environ["AI21_API_KEY"] = settings.api_key
 llm_ai21 = ChatAI21(model="jamba-1.5-large", temperature=0)
 
-os.environ['ANTHROPIC_API_KEY'] = settings.anthropic_key
 llm_claude = ChatAnthropic(model='claude-3-5-sonnet-20241022')
 
-os.environ["OPENAI_API_KEY"] = settings.openai_key
 llm_openai = OpenAI(model="o1-preview")
 
 llm_mapping = {
