@@ -97,7 +97,22 @@ def play_game(request: GameRequest):
     
     # Game Loop
     for round_num in range(1, request.rounds + 1):
-        prompt = f"Game: Iterated Prisoner's Dilemma\nHistory: {history}\nRound {round_num} out of {request.rounds}." 
+
+        intro = '''Game:
+                        You are participating in an iterated Prisoner’s Dilemma. You and an opponent each choose one of two actions:
+                        
+                        Cooperate (C): You both gain a moderate reward (3 points each).
+                        Defect (D): If one defects while the other cooperates, the defector gains a large reward (10 points), and the cooperator suffers a penalty (-10 points).
+                        Mutual Defection (D, D) results in a loss for both (-3 points each).
+                        The payoff matrix:
+                        
+                        Opponent: C	Opponent: D
+                        You: C	(3, 3) – Moderate reward	(-10, 10) – You lose, opponent wins big
+                        You: D	(10, -10) – You win big, opponent loses	(-3, -3) – Both lose
+                        History:
+                        (Include previous rounds if available, e.g.,) '''
+        
+        prompt = f"Game: Iterated Prisoner's Dilemma: {intro} \nHistory: {history}\nRound {round_num} out of {request.rounds}." 
         
         response1 = llm_mapping[request.player1].invoke(prompt + ' You are player1').content
         response2 = llm_mapping[request.player2].invoke(prompt + ' You are player2').content
