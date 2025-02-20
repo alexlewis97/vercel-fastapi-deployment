@@ -111,8 +111,11 @@ def play_game(request: GameRequest):
                         You: D	(10, -10) – You win big, opponent loses	(-3, -3) – Both lose
                         History:
                         (Include previous rounds if available, e.g.,) '''
+
+        instructions = '''Your Task: Based on the history and expected rounds, choose your next move: C (Cooperate) or D (Defect).
+                        The format of the answer should be in a json format the first part of the json should be move: with the options D or C and the next should be reason: with the reasoning behind the move, don't include any \n in the json format'''
         
-        prompt = f"Game: Iterated Prisoner's Dilemma: {intro} \nHistory: {history}\nRound {round_num} out of {request.rounds}." 
+        prompt = f"Game: Iterated Prisoner's Dilemma: {intro} + instructions: {instructions}\nHistory: {history}\nRound {round_num} out of {request.rounds}." 
         
         response1 = llm_mapping[request.player1].invoke(prompt + ' You are player1').content
         response2 = llm_mapping[request.player2].invoke(prompt + ' You are player2').content
