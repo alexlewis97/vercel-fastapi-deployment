@@ -94,7 +94,8 @@ def play_game(request: GameRequest):
     history = []
     score1 = 0
     score2 = 0
-    
+    reasoning1 = []
+    reasoning2 = []
     # Game Loop
     for round_num in range(1, request.rounds + 1):
 
@@ -122,6 +123,9 @@ def play_game(request: GameRequest):
         
         move1, reason1 = extract_json_data(response1)
         move2, reason2 = extract_json_data(response2)
+
+        reasoning1.append(reason1)
+        reasoning2.append(reason2)
         
         round_score1, round_score2 = calculate_score(move1, move2)
         score1 += round_score1
@@ -138,8 +142,8 @@ def play_game(request: GameRequest):
     return {
         "rounds": request.rounds,
         "history": history,
-        "player1": {"model": request.player1, "score": score1, "reasoning": reason1},
-        "player2": {"model": request.player2, "score": score2, "reasoning": reason2}
+        "player1": {"model": request.player1, "score": score1, "reasoning": reasoning1},
+        "player2": {"model": request.player2, "score": score2, "reasoning": reasoning2}
     }
 
 @app.get("/test")
