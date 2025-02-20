@@ -46,8 +46,6 @@ import os
 import json
 import re
 
-settings = Settings()
-
 llm_gemini = ChatGoogleGenerativeAI(model='gemini-2.0-flash-thinking-exp-01-21')
 
 llm_ai21 = ChatAI21(model="jamba-1.5-large", temperature=0)
