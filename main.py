@@ -87,15 +87,12 @@ def play_round(request: RoundRequest):
     if request.player1 not in llm_mapping or request.player2 not in llm_mapping:
         raise HTTPException(status_code=400, detail="Invalid model selection")
     
-     intro = '''Game:
-                        You are participating in an iterated Prisoner’s Dilemma. You and an opponent each choose one of two actions:
-                        
-                        Cooperate (C): You both gain a moderate reward
+     intro = """Game: You are participating in an iterated Prisoner’s Dilemma. You and an opponent each choose one of two actions:  Cooperate (C): You both gain a moderate reward
                         Defect (D): If one defects while the other cooperates, the defector gains a large reward , and the cooperator suffers a penalty
-                        Mutual Defection (D, D) results in a loss for both . '''
+                        Mutual Defection (D, D) results in a loss for both . """
 
-    instructions = '''Your Task: Based on the history and expected rounds, choose your next move: C (Cooperate) or D (Defect).
-                        The format of the answer should be in a json format the first part of the json should be move: with the options D or C and the next should be reason: with the reasoning behind the move, don't include any \n in the json format'''
+    instructions = """Your Task: Based on the history and expected rounds, choose your next move: C (Cooperate) or D (Defect).
+                        The format of the answer should be in a json format the first part of the json should be move: with the options D or C and the next should be reason: with the reasoning behind the move, don't include any \n in the json format"""
         
     task = """Your Task: Based on the history and expected rounds..."""
     payouts= """The payouts for the game are the following: CC - {payouts["CC"]} CD - {payouts["CD"]} DC - {payouts["DC"]} DD - {payouts["DD"]} """
