@@ -87,7 +87,7 @@ def play_round(request: RoundRequest):
     if request.player1 not in llm_mapping or request.player2 not in llm_mapping:
         raise HTTPException(status_code=400, detail="Invalid model selection")
     
-     intro = """Game: You are participating in an iterated Prisoner’s Dilemma. You and an opponent each choose one of two actions:  Cooperate (C): You both gain a moderate reward
+    intro = """Game: You are participating in an iterated Prisoner’s Dilemma. You and an opponent each choose one of two actions:  Cooperate (C): You both gain a moderate reward
                         Defect (D): If one defects while the other cooperates, the defector gains a large reward , and the cooperator suffers a penalty
                         Mutual Defection (D, D) results in a loss for both . """
 
