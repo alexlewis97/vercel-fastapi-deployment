@@ -18,7 +18,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 origins = [
-    "YOUR_REACT_APP_VERCEL_URL",
+    "https://create-react-app-lime-psi-86.vercel.app",
     "http://localhost:3000",  # Add your local development URL
 ]
 
