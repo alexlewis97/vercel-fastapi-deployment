@@ -10,6 +10,7 @@ from langchain_openai import OpenAI
 import os
 import json
 import re
+from dotenv import load_dotenv
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -42,6 +43,15 @@ async def root():
 async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
+if os.getenv("VERCEL_ENV") is None:
+    load_dotenv()
+    print("hello")
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+    ai21_api_key = os.getenv("AI21_API_KEY")
+    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    print(openai_api_key)
+
 llm_gemini = ChatGoogleGenerativeAI(model='gemini-2.0-flash-thinking-exp-01-21')
 llm_ai21 = ChatAI21(model="jamba-1.5-large", temperature=0)
 llm_claude = ChatAnthropic(model='claude-3-5-sonnet-20241022')
@@ -60,17 +70,11 @@ class RoundRequest(BaseModel):
     rounds: int
     current_round: int
     history: list
-    payouts: dict
+    payouts: dict[str, list[int]]
+
 
 def calculate_score(move1, move2, payouts):
-    if move1 == 'C' and move2 == 'C':
-        return payouts["CC"], payouts["CC"]
-    elif move1 == 'C' and move2 == 'D':
-        return payouts["CD"], payouts["DC"]
-    elif move1 == 'D' and move2 == 'C':
-        return payouts["DC"], payouts["CD"]
-    elif move1 == 'D' and move2 == 'D':
-        return payouts["DD"], payouts["DD"]
+    return payouts[f"{move1}{move2}"][0], payouts[f"{move1}{move2}"][1]
 
 def extract_json_data(response):
     match = re.search(r'\{.*\}', response, re.DOTALL)

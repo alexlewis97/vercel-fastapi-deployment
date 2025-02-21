@@ -8,3 +8,4 @@ langchain_openai==0.3.6
 pydantic==2.10.6
 pydantic_settings==2.7.1
 pymongo==4.11.1
+python-dotenv = 1.0.1
