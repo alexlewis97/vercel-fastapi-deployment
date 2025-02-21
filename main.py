@@ -1,7 +1,15 @@
 from time import time
-from fastapi import FastAPI, __version__
+from fastapi import FastAPI, HTTPException, __version__
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+from langchain_ai21 import ChatAI21
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import OpenAI
+import os
+import json
+import re
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -34,24 +42,9 @@ async def root():
 async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
-
-
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from langchain_ai21 import ChatAI21
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_anthropic import ChatAnthropic
-from langchain_openai import OpenAI
-import os
-import json
-import re
-
 llm_gemini = ChatGoogleGenerativeAI(model='gemini-2.0-flash-thinking-exp-01-21')
-
 llm_ai21 = ChatAI21(model="jamba-1.5-large", temperature=0)
-
 llm_claude = ChatAnthropic(model='claude-3-5-sonnet-20241022')
-
 llm_openai = OpenAI(model="o1-preview")
 
 llm_mapping = {
@@ -60,20 +53,24 @@ llm_mapping = {
     "Claude": llm_claude,
     "OpenAI": llm_openai
 }
-class GameRequest(BaseModel):
+
+class RoundRequest(BaseModel):
     player1: str
     player2: str
     rounds: int
+    current_round: int
+    history: list
+    payouts: dict
 
-def calculate_score(move1, move2):
+def calculate_score(move1, move2, payouts):
     if move1 == 'C' and move2 == 'C':
-        return 3, 3
+        return payouts["CC"], payouts["CC"]
     elif move1 == 'C' and move2 == 'D':
-        return -10, 10
+        return payouts["CD"], payouts["DC"]
     elif move1 == 'D' and move2 == 'C':
-        return 10, -10
+        return payouts["DC"], payouts["CD"]
     elif move1 == 'D' and move2 == 'D':
-        return -3, -3
+        return payouts["DD"], payouts["DD"]
 
 def extract_json_data(response):
     match = re.search(r'\{.*\}', response, re.DOTALL)
@@ -85,68 +82,46 @@ def extract_json_data(response):
             return "C", "Failed to parse response."
     return "C", "Invalid response format."
 
-@app.post("/play_game")
-def play_game(request: GameRequest):
+@app.post("/play_round")
+def play_round(request: RoundRequest):
     if request.player1 not in llm_mapping or request.player2 not in llm_mapping:
         raise HTTPException(status_code=400, detail="Invalid model selection")
     
-    # Game Setup
-    history = []
-    score1 = 0
-    score2 = 0
-    reasoning1 = []
-    reasoning2 = []
-    # Game Loop
-    for round_num in range(1, request.rounds + 1):
-
-        intro = '''Game:
+     intro = '''Game:
                         You are participating in an iterated Prisoner’s Dilemma. You and an opponent each choose one of two actions:
                         
-                        Cooperate (C): You both gain a moderate reward (3 points each).
-                        Defect (D): If one defects while the other cooperates, the defector gains a large reward (10 points), and the cooperator suffers a penalty (-10 points).
-                        Mutual Defection (D, D) results in a loss for both (-3 points each).
-                        The payoff matrix:
-                        
-                        Opponent: C	Opponent: D
-                        You: C	(3, 3) – Moderate reward	(-10, 10) – You lose, opponent wins big
-                        You: D	(10, -10) – You win big, opponent loses	(-3, -3) – Both lose
-                        History:
-                        (Include previous rounds if available, e.g.,) '''
+                        Cooperate (C): You both gain a moderate reward
+                        Defect (D): If one defects while the other cooperates, the defector gains a large reward , and the cooperator suffers a penalty
+                        Mutual Defection (D, D) results in a loss for both . '''
 
-        instructions = '''Your Task: Based on the history and expected rounds, choose your next move: C (Cooperate) or D (Defect).
+    instructions = '''Your Task: Based on the history and expected rounds, choose your next move: C (Cooperate) or D (Defect).
                         The format of the answer should be in a json format the first part of the json should be move: with the options D or C and the next should be reason: with the reasoning behind the move, don't include any \n in the json format'''
         
-        prompt = f"Game: Iterated Prisoner's Dilemma: {intro} + instructions: {instructions}\nHistory: {history}\nRound {round_num} out of {request.rounds}." 
-        
-        response1 = llm_mapping[request.player1].invoke(prompt + ' You are player1').content
-        response2 = llm_mapping[request.player2].invoke(prompt + ' You are player2').content
-        
-        move1, reason1 = extract_json_data(response1)
-        move2, reason2 = extract_json_data(response2)
-
-        reasoning1.append(reason1)
-        reasoning2.append(reason2)
-        
-        round_score1, round_score2 = calculate_score(move1, move2)
-        score1 += round_score1
-        score2 += round_score2
-        
-        history.append({
-            "round": round_num,
+    task = """Your Task: Based on the history and expected rounds..."""
+    payouts= """The payouts for the game are the following: CC - {payouts["CC"]} CD - {payouts["CD"]} DC - {payouts["DC"]} DD - {payouts["DD"]} """
+    prompt = f"{intro}{payouts} \nHistory: {request.history}\nRound {request.current_round} out of {request.rounds}.\n\n{instructions}"
+    
+    response1 = llm_mapping[request.player1].invoke(prompt + ' You are player1').content
+    response2 = llm_mapping[request.player2].invoke(prompt + ' You are player2').content
+    
+    move1, reason1 = extract_json_data(response1)
+    move2, reason2 = extract_json_data(response2)
+    
+    round_score1, round_score2 = calculate_score(move1, move2, request.payouts)
+    
+    return {
+        "current_round": request.current_round,
+        "player1": {"move": move1, "score": round_score1, "reason": reason1},
+        "player2": {"move": move2, "score": round_score2, "reason": reason2},
+        "history": request.history + [{
+            "round": request.current_round,
             "player1_move": move1,
             "player2_move": move2,
             "player1_score": round_score1,
             "player2_score": round_score2
-        })
-    
-    return {
-        "rounds": request.rounds,
-        "history": history,
-        "player1": {"model": request.player1, "score": score1, "reasoning": reasoning1},
-        "player2": {"model": request.player2, "score": score2, "reasoning": reasoning2}
+        }]
     }
 
 @app.get("/test")
 def test_route():
     return {"message": "API is running!"}
-
