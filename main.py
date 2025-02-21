@@ -11,9 +11,24 @@ import os
 import json
 import re
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+origins = [
+    "YOUR_REACT_APP_VERCEL_URL",
+    "http://localhost:3000",  # Add your local development URL
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 html = f"""
 <!DOCTYPE html>
@@ -45,12 +60,10 @@ async def hello():
 
 if os.getenv("VERCEL_ENV") is None:
     load_dotenv()
-    print("hello")
     google_api_key = os.getenv("GOOGLE_API_KEY")
     ai21_api_key = os.getenv("AI21_API_KEY")
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    print(openai_api_key)
 
 llm_gemini = ChatGoogleGenerativeAI(model='gemini-2.0-flash-thinking-exp-01-21')
 llm_ai21 = ChatAI21(model="jamba-1.5-large", temperature=0)
@@ -100,7 +113,7 @@ def play_round(request: RoundRequest):
         
     task = """Your Task: Based on the history and expected rounds..."""
     payouts= """The payouts for the game are the following: CC - {payouts["CC"]} CD - {payouts["CD"]} DC - {payouts["DC"]} DD - {payouts["DD"]} """
-    prompt = f"{intro}{payouts} \nHistory: {request.history}\nRound {request.current_round} out of {request.rounds}.\n\n{instructions}"
+    prompt = f"{intro}{payouts} \nHistory: {request.history}\nThis is Round {request.current_round} out of {request.rounds} in total.\n\n{instructions}"
     
     response1 = llm_mapping[request.player1].invoke(prompt + ' You are player1').content
     response2 = llm_mapping[request.player2].invoke(prompt + ' You are player2').content
