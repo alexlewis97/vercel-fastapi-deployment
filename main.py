@@ -75,7 +75,7 @@ class ChatOutput(BaseModel):
     response: str
     indices_of_chunkrretrived: list[str]
     notes: str
-    performance_tracker: dict[str, Any]
+    performance_tracker: dict[str, any]
 
 if os.getenv("VERCEL_ENV") is None:
     load_dotenv()
