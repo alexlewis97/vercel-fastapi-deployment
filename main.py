@@ -65,15 +65,15 @@ class ChatMessage(BaseModel):
     question: str
     answer: str
     notes: str
-    indices_of_chunk_retreived: List[str]
+    indices_of_chunk_retreived: list[str]
 
 class ChatInput(BaseModel):
-    history: List[ChatMessage]
+    history: list[ChatMessage]
     chat_summary: str
 
 class ChatOutput(BaseModel):
     response: str
-    indices_of_chunkrretrived: List[str]
+    indices_of_chunkrretrived: list[str]
     notes: str
     performance_tracker: Dict[str, Any]
 
