@@ -58,6 +58,25 @@ async def root():
 async def hello():
     return {'res': 'pong', 'version': __version__, "time": time()}
 
+client = OpenAI()
+
+# Define input and output data structures
+class ChatMessage(BaseModel):
+    question: str
+    answer: str
+    notes: str
+    indices_of_chunk_retreived: List[str]
+
+class ChatInput(BaseModel):
+    history: List[ChatMessage]
+    chat_summary: str
+
+class ChatOutput(BaseModel):
+    response: str
+    indices_of_chunkrretrived: List[str]
+    notes: str
+    performance_tracker: Dict[str, Any]
+
 if os.getenv("VERCEL_ENV") is None:
     load_dotenv()
     google_api_key = os.getenv("GOOGLE_API_KEY")
@@ -139,3 +158,48 @@ def play_round(request: RoundRequest):
 @app.get("/test")
 def test_route():
     return {"message": "API is running!"}
+
+@app.post("/chat", response_model=ChatOutput)
+async def chat_endpoint(chat_input: ChatInput):
+    # Create a new thread for the conversation
+    thread = client.beta.threads.create()
+
+    # Get the latest user question from history
+    latest_message = chat_input.history[-1]
+
+    # Send the user message to the assistant
+    client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=latest_message.question
+    )
+
+    # Run the assistant and poll for completion
+    run = client.beta.threads.runs.create_and_poll(
+        thread_id=thread.id,
+        assistant_id=my_assistant.id
+    )
+
+    if run.status == 'completed':
+        messages = client.beta.threads.messages.list(
+            thread_id=thread.id
+        )
+        assistant_message = messages.data[0].content[0].text.value
+
+        # Dummy data for performance_tracker for now
+        performance_tracker = {"status": "ok"}
+
+        return ChatOutput(
+            response=assistant_message,
+            indices_of_chunkrretrived=latest_message.indices_of_chunk_retreived,
+            notes=latest_message.notes,
+            performance_tracker=performance_tracker
+        )
+    else:
+        return ChatOutput(
+            response="Still processing or failed.",
+            indices_of_chunkrretrived=[],
+            notes="",
+            performance_tracker={"status": run.status}
+        )
+
